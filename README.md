@@ -1,0 +1,63 @@
+# React + Vite + Tailwind CSS
+
+Modern React application built with Vite and styled with Tailwind CSS.
+
+## Tech Stack
+
+- React 19.2.3
+- TypeScript 5.9.3
+- Vite 7.2.4
+- Tailwind CSS 4.1.17
+- Lucide React (icons)
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- npm or yarn
+
+### Installation
+
+```bash
+npm install
+```
+
+### Development
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+### Build
+
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+## Project Structure
+
+```
+├── src/
+│   ├── App.tsx          # Main application component
+│   ├── main.tsx         # Application entry point
+│   ├── index.css        # Global styles
+│   └── utils/
+│       └── cn.ts        # Utility functions
+├── index.html
+├── package.json
+├── tsconfig.json
+└── vite.config.ts
+```
+
+## License
+
+MIT
