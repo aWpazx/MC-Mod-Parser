@@ -89,11 +89,13 @@ function ModCard({
   isSelected,
   onToggle,
   onViewVersions,
+  t,
 }: {
   mod: UnifiedMod;
   isSelected: boolean;
   onToggle: () => void;
   onViewVersions: () => void;
+  t: (key: string) => string;
 }) {
   return (
     <div className="group relative flex gap-3 rounded-xl border border-slate-700/60 bg-slate-800/80 p-4 transition-all hover:border-slate-600 hover:bg-slate-800">
@@ -177,6 +179,7 @@ function VersionModal({
   onSelectFile,
   gameVersion,
   loader,
+  t,
 }: {
   mod: UnifiedMod;
   files: UnifiedFile[];
@@ -186,6 +189,7 @@ function VersionModal({
   onSelectFile: (mod: UnifiedMod, file: UnifiedFile) => void;
   gameVersion: string;
   loader: string;
+  t: (key: string) => string;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -301,11 +305,13 @@ function ModListPanel({
   onRemove,
   onExport,
   onClear,
+  t,
 }: {
   mods: SelectedMod[];
   onRemove: (id: string) => void;
   onExport: () => void;
   onClear: () => void;
+  t: (key: string) => string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -440,12 +446,14 @@ function ImportModal({
   gameVersion,
   loader,
   cfApiKey,
+  t,
 }: {
   onClose: () => void;
   onImportComplete: (mods: SelectedMod[]) => void;
   gameVersion: string;
   loader: string;
   cfApiKey: string;
+  t: (key: string) => string;
 }) {
   const [dragOver, setDragOver] = useState(false);
   const [parsedMods, setParsedMods] = useState<string[]>([]);
@@ -594,9 +602,9 @@ function ImportModal({
             <Upload className="h-5 w-5 text-white" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-white">Импорт модлиста</h2>
+            <h2 className="text-lg font-bold text-white">{t('importModlist')}</h2>
             <p className="text-xs text-slate-400">
-              Загрузите файл или введите список модов вручную
+              {t('uploadOrEnter')}
               {cfApiKey ? (
                 <span className="ml-1.5 inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-400">
                   ◆ Modrinth + 🔥 CurseForge
@@ -628,7 +636,7 @@ function ImportModal({
                   )}
                 >
                   <FolderOpen className="mr-1.5 inline h-4 w-4" />
-                  Загрузить файл
+                  {t('uploadFile')}
                 </button>
                 <button
                   onClick={() => setUseManual(true)}
@@ -638,7 +646,7 @@ function ImportModal({
                   )}
                 >
                   <FileText className="mr-1.5 inline h-4 w-4" />
-                  Ввести вручную
+                  {t('enterManually')}
                 </button>
               </div>
 
@@ -664,16 +672,16 @@ function ImportModal({
                   />
                   <Upload className={cn('mx-auto h-10 w-10', dragOver ? 'text-violet-400' : 'text-slate-600')} />
                   <p className="mt-3 text-sm text-slate-300">
-                    Перетащите файл сюда или{' '}
+                    {t('dragOrSelect')}{' '}
                     <button
                       onClick={() => fileInputRef.current?.click()}
                       className="font-medium text-violet-400 underline underline-offset-2 hover:text-violet-300"
                     >
-                      выберите файл
+                      {t('selectFile')}
                     </button>
                   </p>
                   <p className="mt-2 text-xs text-slate-500">
-                    Поддерживаемые форматы: .txt, .json, .csv
+                    {t('supportedFormats')}
                   </p>
                   <div className="mx-auto mt-3 max-w-md">
                     <div className="flex flex-wrap justify-center gap-2 text-xs text-slate-600">
@@ -702,7 +710,7 @@ function ImportModal({
                     className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-violet-500 disabled:opacity-40"
                   >
                     <FileText className="h-4 w-4" />
-                    Распарсить
+                    {t('parse')}
                   </button>
                 </div>
               )}
@@ -713,7 +721,7 @@ function ImportModal({
                   <FileText className="h-5 w-5 flex-shrink-0 text-violet-400" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-white">{fileName}</p>
-                    <p className="text-xs text-slate-400">Формат: {fileFormat}</p>
+                    <p className="text-xs text-slate-400">{t('format')} {fileFormat}</p>
                   </div>
                   {detectedVersion && (
                     <span className="rounded bg-emerald-500/20 px-2 py-1 text-xs font-medium text-emerald-400">
@@ -734,7 +742,7 @@ function ImportModal({
                   <div className="mb-3 flex items-center justify-between">
                     <h3 className="flex items-center gap-2 text-sm font-semibold text-white">
                       <Package className="h-4 w-4 text-violet-400" />
-                      Найдено модов в списке: {parsedMods.length}
+                      {t('modsFoundInList')} {parsedMods.length}
                     </h3>
                   </div>
 
@@ -770,9 +778,9 @@ function ImportModal({
                         className="h-4 w-4 rounded border-slate-600 bg-slate-700 text-violet-500 focus:ring-violet-500/50"
                       />
                       <div>
-                        <span className="text-sm text-slate-300">Автоматически подбирать файлы</span>
+                        <span className="text-sm text-slate-300">{t('autoPickFiles')}</span>
                         <p className="text-xs text-slate-500">
-                          Выберет последний release-файл для указанной версии и загрузчика
+                          {t('autoPickDescription')}
                         </p>
                       </div>
                     </label>
@@ -1509,6 +1517,7 @@ export function App() {
                     isSelected={isModSelected(mod)}
                     onToggle={() => toggleMod(mod)}
                     onViewVersions={() => handleViewVersions(mod)}
+                    t={t}
                   />
                 ))}
               </div>
@@ -1576,6 +1585,7 @@ export function App() {
                 onRemove={removeMod}
                 onExport={exportModList}
                 onClear={() => setSelectedMods([])}
+                t={t}
               />
 
               {/* Import shortcut card */}
@@ -1643,6 +1653,7 @@ export function App() {
           onSelectFile={handleSelectFile}
           gameVersion={gameVersion}
           loader={loader}
+          t={t}
         />
       )}
 
@@ -1654,6 +1665,7 @@ export function App() {
           gameVersion={gameVersion}
           loader={loader}
           cfApiKey={cfApiKey}
+          t={t}
         />
       )}
     </div>
