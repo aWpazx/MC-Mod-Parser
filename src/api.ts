@@ -1,5 +1,7 @@
 // ==================== TYPES ====================
 
+export type ContentType = 'mod' | 'datapack' | 'resourcepack' | 'shader';
+
 export interface UnifiedMod {
   id: string;
   source: 'modrinth' | 'curseforge';
@@ -11,6 +13,7 @@ export interface UnifiedMod {
   slug: string;
   categories: string[];
   cfId?: number;
+  contentType?: ContentType; // Optional for backward compatibility
 }
 
 export interface UnifiedFile {
@@ -67,15 +70,44 @@ interface ModrinthVersion {
 const MODRINTH_API = 'https://api.modrinth.com/v2';
 const MODRINTH_HEADERS = { 'User-Agent': 'MCModParser/1.0.0' };
 
+/** Get Modrinth project_type facet for content type */
+function getModrinthProjectType(contentType: ContentType): string {
+  const typeMap: Record<ContentType, string> = {
+    mod: 'mod',
+    datapack: 'datapack',
+    resourcepack: 'resourcepack',
+    shader: 'shader',
+  };
+  return typeMap[contentType] || 'mod';
+}
+
+/** Get CurseForge classId for content type */
+function getCurseForgeClassId(contentType: ContentType): string {
+  const classMap: Record<ContentType, string> = {
+    mod: '6',
+    datapack: '6', // CurseForge doesn't have separate class for datapacks
+    resourcepack: '12',
+    shader: '6', // Shaders are often in mods category
+  };
+  return classMap[contentType] || '6';
+}
+
 export async function searchModrinth(
   query: string,
   gameVersion: string,
   loader: string,
-  offset = 0
+  offset = 0,
+  contentType: ContentType = 'mod'
 ): Promise<{ mods: UnifiedMod[]; total: number }> {
-  const facets: string[][] = [['project_type:mod']];
+  const projectType = getModrinthProjectType(contentType);
+  const facets: string[][] = [[`project_type:${projectType}`]];
+  
   if (gameVersion) facets.push([`versions:${gameVersion}`]);
-  if (loader) facets.push([`categories:${loader}`]);
+  if (loader && contentType === 'mod') facets.push([`categories:${loader}`]);
+  if (loader && contentType === 'shader') {
+    // For shaders, loader might be iris/optifine
+    facets.push([`categories:${loader}`]);
+  }
 
   const params = new URLSearchParams({
     query,
@@ -90,18 +122,24 @@ export async function searchModrinth(
   if (!res.ok) throw new Error(`Modrinth: ${res.status} ${res.statusText}`);
   const data: ModrinthSearchResult = await res.json();
 
+  const mods = data.hits.map((h) => ({
+    id: h.project_id,
+    source: 'modrinth' as const,
+    title: h.title,
+    description: h.description,
+    iconUrl: h.icon_url || '',
+    downloads: h.downloads,
+    author: h.author || 'Unknown',
+    slug: h.slug,
+    categories: h.categories,
+    contentType,
+  }));
+
+  // Sort by relevance if there's a search query
+  const sortedMods = query.trim() ? sortByRelevance(mods, query) : mods;
+
   return {
-    mods: data.hits.map((h) => ({
-      id: h.project_id,
-      source: 'modrinth' as const,
-      title: h.title,
-      description: h.description,
-      iconUrl: h.icon_url || '',
-      downloads: h.downloads,
-      author: h.author || 'Unknown',
-      slug: h.slug,
-      categories: h.categories,
-    })),
+    mods: sortedMods,
     total: data.total_hits,
   };
 }
@@ -243,20 +281,23 @@ export async function searchCurseForge(
   gameVersion: string,
   loader: string,
   apiKey: string,
-  offset = 0
+  offset = 0,
+  contentType: ContentType = 'mod'
 ): Promise<{ mods: UnifiedMod[]; total: number }> {
+  const classId = getCurseForgeClassId(contentType);
+  
   const params = new URLSearchParams({
     gameId: '432',
     searchFilter: query,
     pageSize: '20',
     index: String(offset),
-    classId: '6',
+    classId,
     sortField: '2',
     sortOrder: 'desc',
   });
   if (gameVersion) params.set('gameVersion', gameVersion);
   const lt = loaderToCFType(loader);
-  if (lt !== undefined) params.set('modLoaderType', String(lt));
+  if (lt !== undefined && contentType === 'mod') params.set('modLoaderType', String(lt));
 
   const res = await fetch(`${CF_API}/mods/search?${params}`, {
     headers: { 'x-api-key': apiKey, Accept: 'application/json' },
@@ -264,8 +305,16 @@ export async function searchCurseForge(
   if (!res.ok) throw new Error(`CurseForge: ${res.status} ${res.statusText}`);
   const data: CFSearchResult = await res.json();
 
+  const mods = data.data.map((m) => ({
+    ...cfModToUnified(m),
+    contentType,
+  }));
+
+  // Sort by relevance if there's a search query
+  const sortedMods = query.trim() ? sortByRelevance(mods, query) : mods;
+
   return {
-    mods: data.data.map(cfModToUnified),
+    mods: sortedMods,
     total: data.pagination.totalCount,
   };
 }
@@ -437,6 +486,83 @@ function extractAvailableVersions(files: UnifiedFile[]): string[] {
 }
 
 // ==================== SEARCH QUERY NORMALIZATION ====================
+
+/** Calculate relevance score for a search result */
+function calculateRelevanceScore(
+  mod: UnifiedMod,
+  searchQuery: string
+): number {
+  const query = searchQuery.toLowerCase().trim();
+  const slug = mod.slug.toLowerCase();
+  const title = mod.title.toLowerCase();
+  
+  let score = 0;
+  
+  // Exact slug match (highest priority)
+  if (slug === query) {
+    score += 1000;
+  }
+  // Exact title match (second highest)
+  else if (title === query) {
+    score += 900;
+  }
+  // Slug starts with query
+  else if (slug.startsWith(query)) {
+    score += 700;
+  }
+  // Title starts with query
+  else if (title.startsWith(query)) {
+    score += 600;
+  }
+  // Slug contains query
+  else if (slug.includes(query)) {
+    score += 400;
+  }
+  // Title contains query
+  else if (title.includes(query)) {
+    score += 300;
+  }
+  // Partial word match in title
+  else {
+    const titleWords = title.split(/[\s-_]+/);
+    const queryWords = query.split(/[\s-_]+/);
+    
+    for (const qWord of queryWords) {
+      for (const tWord of titleWords) {
+        if (tWord.startsWith(qWord)) {
+          score += 100;
+        } else if (tWord.includes(qWord)) {
+          score += 50;
+        }
+      }
+    }
+  }
+  
+  // Download count as tiebreaker (normalized to 0-100 range)
+  const downloadBonus = Math.min(100, Math.log10(mod.downloads + 1) * 10);
+  score += downloadBonus;
+  
+  return score;
+}
+
+/** Sort search results by relevance */
+function sortByRelevance(
+  mods: UnifiedMod[],
+  searchQuery: string
+): UnifiedMod[] {
+  if (!searchQuery.trim()) {
+    return mods;
+  }
+  
+  const scored = mods.map((mod) => ({
+    mod,
+    score: calculateRelevanceScore(mod, searchQuery),
+  }));
+  
+  scored.sort((a, b) => b.score - a.score);
+  
+  return scored.map((item) => item.mod);
+}
 
 /** Generate multiple search term variations for better matching */
 function generateSearchVariations(nameOrSlug: string): string[] {
@@ -961,6 +1087,19 @@ export const LOADERS = [
   { value: 'forge', label: 'Forge' },
   { value: 'neoforge', label: 'NeoForge' },
   { value: 'quilt', label: 'Quilt' },
+];
+
+export const SHADER_LOADERS = [
+  { value: 'iris', label: 'Iris' },
+  { value: 'optifine', label: 'OptiFine' },
+  { value: 'canvas', label: 'Canvas' },
+];
+
+export const CONTENT_TYPES: { value: ContentType; label: string }[] = [
+  { value: 'mod', label: 'Mods' },
+  { value: 'datapack', label: 'Datapacks' },
+  { value: 'resourcepack', label: 'Resource Packs' },
+  { value: 'shader', label: 'Shaders' },
 ];
 
 export function formatDownloads(n: number): string {

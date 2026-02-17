@@ -7,11 +7,11 @@ import {
   FolderOpen,
 } from 'lucide-react';
 import {
-  type UnifiedMod, type UnifiedFile, type ImportResult,
+  type UnifiedMod, type UnifiedFile, type ImportResult, type ContentType,
   searchModrinth, getModrinthVersions,
   searchCurseForge, getCurseForgeFiles,
   resolveModMultiSource, parseModListFile,
-  GAME_VERSIONS, LOADERS,
+  GAME_VERSIONS, LOADERS, SHADER_LOADERS, CONTENT_TYPES,
   formatDownloads, formatSize, formatDate,
 } from './api';
 import { cn } from './utils/cn';
@@ -1107,6 +1107,7 @@ export function App() {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const t = (key: string) => getTranslation(language, key);
   
+  const [contentType, setContentType] = useState<ContentType>('mod');
   const [source, setSource] = useState<Source>('modrinth');
   const [gameVersion, setGameVersion] = useState('1.20.1');
   const [loader, setLoader] = useState('fabric');
@@ -1133,7 +1134,7 @@ export function App() {
 
   // Search
   const doSearch = useCallback(
-    async (q: string, src: Source, gv: string, ld: string, key: string) => {
+    async (q: string, src: Source, gv: string, ld: string, key: string, ct: ContentType) => {
       if (!q.trim() && !gv) {
         setResults([]);
         setTotalResults(0);
@@ -1146,12 +1147,12 @@ export function App() {
       try {
         let result: { mods: UnifiedMod[]; total: number };
         if (src === 'modrinth') {
-          result = await searchModrinth(q, gv, ld);
+          result = await searchModrinth(q, gv, ld, 0, ct);
         } else {
           if (!key) {
             throw new Error(t('cfApiKeyRequired'));
           }
-          result = await searchCurseForge(q, gv, ld, key);
+          result = await searchCurseForge(q, gv, ld, key, 0, ct);
         }
         setResults(result.mods);
         setTotalResults(result.total);
@@ -1163,22 +1164,22 @@ export function App() {
         setSearching(false);
       }
     },
-    []
+    [t]
   );
 
   const handleSearch = useCallback(() => {
-    doSearch(query, source, gameVersion, loader, cfApiKey);
-  }, [query, source, gameVersion, loader, cfApiKey, doSearch]);
+    doSearch(query, source, gameVersion, loader, cfApiKey, contentType);
+  }, [query, source, gameVersion, loader, cfApiKey, contentType, doSearch]);
 
   useEffect(() => {
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(() => {
-      doSearch(query, source, gameVersion, loader, cfApiKey);
+      doSearch(query, source, gameVersion, loader, cfApiKey, contentType);
     }, 500);
     return () => {
       if (searchTimeout.current) clearTimeout(searchTimeout.current);
     };
-  }, [query, source, gameVersion, loader, cfApiKey, doSearch]);
+  }, [query, source, gameVersion, loader, cfApiKey, contentType, doSearch]);
 
   // View versions
   const handleViewVersions = async (mod: UnifiedMod) => {
@@ -1410,48 +1411,79 @@ export function App() {
       {/* Main Content */}
       <main className="relative mx-auto max-w-7xl px-4 py-6 sm:px-6">
         {/* Filters */}
-        <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <SelectDropdown
-            value={gameVersion}
-            onChange={setGameVersion}
-            options={gameVersionOptions}
-            placeholder="Версия игры"
-            icon={Layers}
-          />
-          <SelectDropdown
-            value={loader}
-            onChange={setLoader}
-            options={LOADERS}
-            placeholder="Загрузчик"
-            icon={Package}
-          />
-          <div className="relative sm:col-span-2">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder={t('search')}
-              className="h-10 w-full rounded-lg border border-slate-700 bg-slate-800 pl-9 pr-20 text-sm text-slate-200 placeholder-slate-500 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
+        <div className="mb-6 space-y-3">
+          {/* Content Type Selector */}
+          <div className="flex flex-wrap gap-2">
+            {CONTENT_TYPES.map((type) => (
+              <button
+                key={type.value}
+                onClick={() => {
+                  setContentType(type.value);
+                  setResults([]);
+                  setTotalResults(0);
+                }}
+                className={cn(
+                  'rounded-lg px-4 py-2 text-sm font-medium transition',
+                  contentType === type.value
+                    ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white'
+                )}
+              >
+                {t(`contentType${type.label.replace(/\s+/g, '')}`)}
+              </button>
+            ))}
+          </div>
+
+          {/* Version, Loader, and Search */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <SelectDropdown
+              value={gameVersion}
+              onChange={setGameVersion}
+              options={gameVersionOptions}
+              placeholder={t('gameVersion')}
+              icon={Layers}
             />
-            <button
-              onClick={handleSearch}
-              disabled={searching}
-              className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
-            >
-              {searching ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Search className="h-3.5 w-3.5" />
-              )}
-              Найти
-            </button>
+            {/* Show loader selector only for mods and shaders */}
+            {(contentType === 'mod' || contentType === 'shader') && (
+              <SelectDropdown
+                value={loader}
+                onChange={setLoader}
+                options={contentType === 'shader' ? SHADER_LOADERS : LOADERS}
+                placeholder={contentType === 'shader' ? t('shaderLoader') : t('loader')}
+                icon={Package}
+              />
+            )}
+            <div className={cn(
+              'relative',
+              contentType === 'mod' || contentType === 'shader' ? 'sm:col-span-2' : 'sm:col-span-3'
+            )}>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                placeholder={t('searchContent')}
+                className="h-10 w-full rounded-lg border border-slate-700 bg-slate-800 pl-9 pr-20 text-sm text-slate-200 placeholder-slate-500 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={searching}
+                className="absolute right-1 top-1/2 -translate-y-1/2 inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
+              >
+                {searching ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Search className="h-3.5 w-3.5" />
+                )}
+                {t('find')}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Quick search suggestions */}
-        {results.length === 0 && !searching && !searchError && (
+        {results.length === 0 && !searching && !searchError && contentType === 'mod' && (
           <div className="mb-6">
             <p className="mb-2 text-xs text-slate-500">Популярные моды:</p>
             <div className="flex flex-wrap gap-2">
