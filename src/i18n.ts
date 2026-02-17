@@ -13,7 +13,7 @@ export const LANGUAGES: { code: Language; name: string; flag: string }[] = [
 
 export const translations: Record<Language, Record<string, string>> = {
   ru: {
-    appTitle: 'MC Mod Parser',
+    appTitle: 'xVolData',
     appSubtitle: 'Поиск модов Minecraft — Modrinth & CurseForge',
     import: 'Импорт',
     search: 'Поиск модов...',
@@ -32,9 +32,10 @@ export const translations: Record<Language, Record<string, string>> = {
     copied: 'Готово!',
     download: 'Скачать',
     apiKeyRequired: 'Для CurseForge требуется API ключ',
+    results: 'результатов',
   },
   en: {
-    appTitle: 'MC Mod Parser',
+    appTitle: 'xVolData',
     appSubtitle: 'Minecraft Mod Search — Modrinth & CurseForge',
     import: 'Import',
     search: 'Search mods...',
@@ -53,9 +54,10 @@ export const translations: Record<Language, Record<string, string>> = {
     copied: 'Copied!',
     download: 'Download',
     apiKeyRequired: 'CurseForge API key required',
+    results: 'results',
   },
   de: {
-    appTitle: 'MC Mod Parser',
+    appTitle: 'xVolData',
     appSubtitle: 'Minecraft Mod-Suche — Modrinth & CurseForge',
     import: 'Importieren',
     search: 'Mods suchen...',
@@ -74,9 +76,10 @@ export const translations: Record<Language, Record<string, string>> = {
     copied: 'Kopiert!',
     download: 'Herunterladen',
     apiKeyRequired: 'CurseForge API-Schlüssel erforderlich',
+    results: 'Ergebnisse',
   },
   fr: {
-    appTitle: 'MC Mod Parser',
+    appTitle: 'xVolData',
     appSubtitle: 'Recherche de mods Minecraft — Modrinth & CurseForge',
     import: 'Importer',
     search: 'Rechercher des mods...',
@@ -95,9 +98,10 @@ export const translations: Record<Language, Record<string, string>> = {
     copied: 'Copié!',
     download: 'Télécharger',
     apiKeyRequired: 'Clé API CurseForge requise',
+    results: 'résultats',
   },
   es: {
-    appTitle: 'MC Mod Parser',
+    appTitle: 'xVolData',
     appSubtitle: 'Búsqueda de mods de Minecraft — Modrinth & CurseForge',
     import: 'Importar',
     search: 'Buscar mods...',
@@ -116,9 +120,10 @@ export const translations: Record<Language, Record<string, string>> = {
     copied: '¡Copiado!',
     download: 'Descargar',
     apiKeyRequired: 'Se requiere clave API de CurseForge',
+    results: 'resultados',
   },
   zh: {
-    appTitle: 'MC Mod Parser',
+    appTitle: 'xVolData',
     appSubtitle: 'Minecraft 模组搜索 — Modrinth & CurseForge',
     import: '导入',
     search: '搜索模组...',
@@ -137,9 +142,10 @@ export const translations: Record<Language, Record<string, string>> = {
     copied: '已复制！',
     download: '下载',
     apiKeyRequired: '需要 CurseForge API 密钥',
+    results: '结果',
   },
   ja: {
-    appTitle: 'MC Mod Parser',
+    appTitle: 'xVolData',
     appSubtitle: 'Minecraft Mod検索 — Modrinth & CurseForge',
     import: 'インポート',
     search: 'Modを検索...',
@@ -158,6 +164,7 @@ export const translations: Record<Language, Record<string, string>> = {
     copied: 'コピーしました！',
     download: 'ダウンロード',
     apiKeyRequired: 'CurseForge APIキーが必要です',
+    results: '件',
   },
 };
 

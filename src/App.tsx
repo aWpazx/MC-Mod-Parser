@@ -1282,9 +1282,9 @@ export function App() {
               <Package className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white sm:text-xl">MC Mod Parser</h1>
+              <h1 className="text-lg font-bold text-white sm:text-xl">{t('appTitle')}</h1>
               <p className="hidden text-xs text-slate-500 sm:block">
-                Поиск модов Minecraft — Modrinth & CurseForge
+                {t('appSubtitle')}
               </p>
             </div>
           </div>
@@ -1330,10 +1330,10 @@ export function App() {
             <button
               onClick={() => setShowImportModal(true)}
               className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white shadow transition hover:bg-violet-500 sm:px-4"
-              title="Импорт модлиста"
+              title={t('import')}
             >
               <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Импорт</span>
+              <span className="hidden sm:inline">{t('import')}</span>
             </button>
 
             {/* Source Toggle */}
@@ -1425,7 +1425,7 @@ export function App() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Поиск модов... (напр. sodium, create, iris)"
+              placeholder={t('search')}
               className="h-10 w-full rounded-lg border border-slate-700 bg-slate-800 pl-9 pr-20 text-sm text-slate-200 placeholder-slate-500 outline-none transition focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50"
             />
             <button
@@ -1471,7 +1471,7 @@ export function App() {
                 <p className="text-sm text-slate-400">
                   {searching ? (
                     <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Поиск...
+                      <Loader2 className="h-4 w-4 animate-spin" /> {t('searching')}
                     </span>
                   ) : (
                     <>
