@@ -1,10 +1,10 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   Search, Download, ExternalLink, X, ChevronDown,
   Package, Layers, Trash2, FileDown, Copy, Check,
   AlertCircle, Loader2, Info, Star, Key, RefreshCw,
   Upload, FileText, CheckCircle2, XCircle, Clock,
-  FolderOpen,
+  FolderOpen, LogIn, LogOut, UserCircle,
 } from 'lucide-react';
 import {
   type UnifiedMod, type UnifiedFile, type ImportResult, type ContentType,
@@ -16,6 +16,8 @@ import {
 } from './api';
 import { cn } from './utils/cn';
 import { type Language, LANGUAGES, getTranslation } from './i18n';
+import { AuthModal } from './AuthModal';
+import { getCurrentUser, logout, saveMods, saveCfApiKey, type UserAccount, type SavedMod } from './localAuth';
 
 type Source = 'modrinth' | 'curseforge';
 
@@ -1107,6 +1109,11 @@ export function App() {
   const [showLangMenu, setShowLangMenu] = useState(false);
   const t = (key: string) => getTranslation(language, key);
   
+  // Auth state
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  
   const [contentType, setContentType] = useState<ContentType>('mod');
   const [source, setSource] = useState<Source>('modrinth');
   const [gameVersion, setGameVersion] = useState('1.20.1');
@@ -1131,6 +1138,63 @@ export function App() {
     loading: boolean;
     error: string;
   } | null>(null);
+
+  // Load user on mount
+  useEffect(() => {
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      // Load saved mods
+      if (user.savedMods && user.savedMods.length > 0) {
+        setSelectedMods(user.savedMods);
+      }
+      // Load CF API key
+      if (user.cfApiKey) {
+        setCfApiKey(user.cfApiKey);
+      }
+    }
+  }, []);
+
+  // Save mods to user account when they change
+  useEffect(() => {
+    if (currentUser && selectedMods.length > 0) {
+      const savedMods: SavedMod[] = selectedMods.map(mod => ({
+        ...mod,
+        savedAt: new Date().toISOString(),
+      }));
+      saveMods(currentUser.id, savedMods);
+    }
+  }, [selectedMods, currentUser]);
+
+  // Save CF API key to user account when it changes
+  useEffect(() => {
+    if (currentUser && cfApiKey) {
+      saveCfApiKey(currentUser.id, cfApiKey);
+    }
+  }, [cfApiKey, currentUser]);
+
+  // Handle logout
+  const handleLogout = () => {
+    logout();
+    setCurrentUser(null);
+    setShowUserMenu(false);
+  };
+
+  // Handle auth success
+  const handleAuthSuccess = () => {
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      // Load saved mods
+      if (user.savedMods && user.savedMods.length > 0) {
+        setSelectedMods(user.savedMods);
+      }
+      // Load CF API key
+      if (user.cfApiKey) {
+        setCfApiKey(user.cfApiKey);
+      }
+    }
+  };
 
   // Search
   const doSearch = useCallback(
@@ -1299,6 +1363,49 @@ export function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* User Profile / Login Button */}
+            {currentUser ? (
+              <div className="relative z-[60]">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="flex h-9 items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3 text-sm transition hover:border-slate-600 hover:bg-slate-700"
+                  title={t('authProfile')}
+                >
+                  <UserCircle className="h-4 w-4 text-emerald-400" />
+                  <span className="hidden text-slate-300 sm:inline">{currentUser.username}</span>
+                </button>
+                {showUserMenu && (
+                  <>
+                    <div className="fixed inset-0 z-[200]" onClick={() => setShowUserMenu(false)} />
+                    <div className="absolute right-0 top-full z-[201] mt-2 w-48 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 shadow-2xl backdrop-blur-xl">
+                      <div className="border-b border-slate-700 px-4 py-3">
+                        <p className="text-sm font-medium text-white">{currentUser.username}</p>
+                        {currentUser.email && (
+                          <p className="text-xs text-slate-500">{currentUser.email}</p>
+                        )}
+                      </div>
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-red-400 transition hover:bg-slate-800"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        {t('authLogout')}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                className="flex h-9 items-center gap-2 rounded-lg border border-emerald-600 bg-emerald-600/10 px-3 text-sm font-medium text-emerald-400 transition hover:bg-emerald-600/20"
+                title={t('authLogin')}
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">{t('authLogin')}</span>
+              </button>
+            )}
+
             {/* Language Switcher */}
             <div className="relative z-[60]">
               <button
@@ -1748,6 +1855,16 @@ export function App() {
           gameVersion={gameVersion}
           loader={loader}
           cfApiKey={cfApiKey}
+          t={t}
+        />
+      )}
+
+      {/* Auth Modal */}
+      {showAuthModal && (
+        <AuthModal
+          onClose={() => setShowAuthModal(false)}
+          onSuccess={handleAuthSuccess}
+          language={language}
           t={t}
         />
       )}
